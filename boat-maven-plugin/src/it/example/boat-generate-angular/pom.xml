@@ -41,6 +41,7 @@
                         <configuration>
                             <generatorName>boat-angular</generatorName>
                             <inputSpec>${project.build.directory}/openapi/com/backbase/oss/boat/raml-spec/presentation-client-api/presentation-client-api/1.0.0-SNAPSHOT/openapi.yaml</inputSpec>
+                            <additionalProperties>npmName=boat,npmVersion=1.0,withMocks=true</additionalProperties>
                         </configuration>
                     </execution>
                 </executions>
