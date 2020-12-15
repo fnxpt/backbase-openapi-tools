@@ -6,7 +6,10 @@ import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+
 import java.util.List;
+import java.util.Map;
+
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -46,7 +49,10 @@ public class BoatExampleUtils {
         if (ref.startsWith("#/components/schemas")) {
             ref = StringUtils.substringAfterLast(ref, "/");
 
-            if (openAPI.getComponents().getSchemas() != null && openAPI.getComponents().getSchemas().get(ref) != null && openAPI.getComponents().getSchemas().get(ref).getExample() != null) {
+            if (openAPI.getComponents().getSchemas() != null && openAPI.getComponents().getSchemas().get(ref) != null
+                    && openAPI.getComponents().getSchemas().get(ref).getExample() != null
+                    && !(openAPI.getComponents().getSchemas().get(ref).getExample() instanceof Map)
+            ) {
                 Object example = openAPI.getComponents().getSchemas().get(ref).getExample();
                 BoatExample boatExample = new BoatExample("example", contentType, new Example().value(example), isJson(contentType));
                 examples.add(boatExample);
