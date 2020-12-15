@@ -20,6 +20,7 @@ package com.backbase.oss.codegen.angular;
 import com.backbase.oss.codegen.doc.BoatCodegenParameter;
 import com.backbase.oss.codegen.doc.BoatCodegenResponse;
 import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
@@ -28,6 +29,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.openapitools.codegen.*;
+import org.openapitools.codegen.examples.ExampleGenerator;
 import org.openapitools.codegen.languages.AbstractTypeScriptClientCodegen;
 import org.openapitools.codegen.meta.features.DocumentationFeature;
 import org.openapitools.codegen.utils.ModelUtils;
@@ -491,6 +493,65 @@ public class BoatAngularGenerator extends AbstractTypeScriptClientCodegen {
     @Override
     public String toModelName(String name) {
         return super.toModelName(name);
+    }
+
+    @Override
+    protected void handleMethodResponse(Operation operation, Map<String, Schema> schemas, CodegenOperation op, ApiResponse methodResponse, Map<String, String> importMappings) {
+        Schema responseSchema = ModelUtils.unaliasSchema(this.openAPI, ModelUtils.getSchemaFromResponse(methodResponse), importMappings);
+        if (responseSchema != null) {
+            CodegenProperty cm = this.fromProperty("response", responseSchema);
+            if (ModelUtils.isArraySchema(responseSchema)) {
+                ArraySchema as = (ArraySchema)responseSchema;
+                CodegenProperty innerProperty = this.fromProperty("response", this.getSchemaItems(as));
+                op.returnBaseType = innerProperty.baseType;
+            } else if (ModelUtils.isMapSchema(responseSchema)) {
+                CodegenProperty innerProperty = this.fromProperty("response", ModelUtils.getAdditionalProperties(responseSchema));
+                op.returnBaseType = innerProperty.baseType;
+            } else if (cm.complexType != null) {
+                op.returnBaseType = cm.complexType;
+            } else {
+                op.returnBaseType = cm.baseType;
+            }
+
+            String exampleStatusCode = "200";
+            Iterator var13 = operation.getResponses().keySet().iterator();
+
+            while(var13.hasNext()) {
+                String key = (String)var13.next();
+                if (operation.getResponses().get(key) == methodResponse && !key.equals("default")) {
+                    exampleStatusCode = key;
+                }
+            }
+
+//            op.examples = (new ExampleGenerator(schemas, this.openAPI)).generateFromResponseSchema(exampleStatusCode, responseSchema, getProducesInfo(this.openAPI, operation));
+            op.defaultResponse = this.toDefaultValue(responseSchema);
+            op.returnType = cm.dataType;
+            op.hasReference = schemas.containsKey(op.returnBaseType);
+            Schema schema = (Schema)schemas.get(op.returnBaseType);
+            if (schema != null) {
+                CodegenModel cmod = this.fromModel(op.returnBaseType, schema);
+                op.discriminator = cmod.discriminator;
+            }
+
+            if (cm.isContainer) {
+                op.returnContainer = cm.containerType;
+                if ("map".equals(cm.containerType)) {
+                    op.isMapContainer = true;
+                } else if ("list".equalsIgnoreCase(cm.containerType)) {
+                    op.isListContainer = true;
+                } else if ("array".equalsIgnoreCase(cm.containerType)) {
+                    op.isListContainer = true;
+                }
+            } else {
+                op.returnSimpleType = true;
+            }
+
+            if (this.languageSpecificPrimitives().contains(op.returnBaseType) || op.returnBaseType == null) {
+                op.returnTypeIsPrimitive = true;
+            }
+        }
+
+        this.addHeaders(methodResponse, op.responseHeaders);
     }
 
     public String removeModelPrefixSuffix(String name) {
